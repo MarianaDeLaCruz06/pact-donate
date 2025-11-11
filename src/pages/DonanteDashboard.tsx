@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, LogOut, User, FileText, Droplets } from "lucide-react";
+import { Heart, LogOut, User, FileText, Droplets, Bell } from "lucide-react";
 import DonanteInicio from "@/components/donante/DonanteInicio";
 import DonanteHistoria from "@/components/donante/DonanteHistoria";
 import DonanteDonaciones from "@/components/donante/DonanteDonaciones";
 import DonantePerfil from "@/components/donante/DonantePerfil";
+import DonanteNotificaciones from "@/components/donante/DonanteNotificaciones";
 
 const DonanteDashboard = () => {
   const navigate = useNavigate();
@@ -23,20 +24,16 @@ const DonanteDashboard = () => {
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.getUser();
       
       if (!user) {
         navigate('/auth');
         return;
       }
 
-      const { data, error } = await supabase
-        .from('donantes')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      const data = await auth.getMe();
 
-      if (error || !data) {
+      if (!data) {
         toast({
           title: "Error",
           description: "No se encontró tu perfil de donante",
@@ -54,8 +51,8 @@ const DonanteDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    auth.logout();
     navigate('/');
     toast({
       title: "Sesión cerrada",
@@ -96,7 +93,7 @@ const DonanteDashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <Tabs defaultValue="inicio" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="inicio">
               <Heart className="mr-2 h-4 w-4" />
               Inicio
@@ -108,6 +105,10 @@ const DonanteDashboard = () => {
             <TabsTrigger value="donaciones">
               <Droplets className="mr-2 h-4 w-4" />
               Mis Donaciones
+            </TabsTrigger>
+            <TabsTrigger value="notificaciones">
+              <Bell className="mr-2 h-4 w-4" />
+              Notificaciones
             </TabsTrigger>
             <TabsTrigger value="perfil">
               <User className="mr-2 h-4 w-4" />
@@ -125,6 +126,10 @@ const DonanteDashboard = () => {
 
           <TabsContent value="donaciones">
             <DonanteDonaciones donante={donante} />
+          </TabsContent>
+
+          <TabsContent value="notificaciones">
+            <DonanteNotificaciones />
           </TabsContent>
 
           <TabsContent value="perfil">

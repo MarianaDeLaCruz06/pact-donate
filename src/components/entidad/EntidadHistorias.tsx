@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { historiasClinicas } from "@/lib/api";
 import { FileText, Eye } from "lucide-react";
 
 interface EntidadHistoriasProps {
@@ -26,19 +26,15 @@ const EntidadHistorias = ({ entidad }: EntidadHistoriasProps) => {
   }, []);
 
   const loadHistorias = async () => {
-    const { data } = await supabase
-      .from('historias_clinicas')
-      .select(`
-        *,
-        donantes:documento_donante (
-          nombre,
-          documento
-        )
-      `)
-      .order('fecha_envio', { ascending: false });
-
-    setHistorias(data || []);
-    setLoading(false);
+    try {
+      const data = await historiasClinicas.getAll();
+      // Transform data to include donante info if needed
+      setHistorias(data || []);
+    } catch (error) {
+      console.error('Error loading historias:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRevisar = (historia: any) => {
@@ -52,16 +48,10 @@ const EntidadHistorias = ({ entidad }: EntidadHistoriasProps) => {
     setProcesando(true);
 
     try {
-      const { error } = await supabase
-        .from('historias_clinicas')
-        .update({
-          estado: 'Aprobada',
-          observaciones_medicas: observacionesMedicas,
-          fecha_revision: new Date().toISOString(),
-        })
-        .eq('id', selectedHistoria.id);
-
-      if (error) throw error;
+      await historiasClinicas.update(selectedHistoria.id, {
+        estado: 'Aprobada',
+        observaciones_medicas: observacionesMedicas,
+      });
 
       toast({
         title: "Historia aprobada",
@@ -87,16 +77,10 @@ const EntidadHistorias = ({ entidad }: EntidadHistoriasProps) => {
     setProcesando(true);
 
     try {
-      const { error } = await supabase
-        .from('historias_clinicas')
-        .update({
-          estado: 'Rechazada',
-          observaciones_medicas: observacionesMedicas,
-          fecha_revision: new Date().toISOString(),
-        })
-        .eq('id', selectedHistoria.id);
-
-      if (error) throw error;
+      await historiasClinicas.update(selectedHistoria.id, {
+        estado: 'Rechazada',
+        observaciones_medicas: observacionesMedicas,
+      });
 
       toast({
         title: "Historia rechazada",

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, UserCircle, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/api";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -47,32 +47,19 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Verificar si es donante o entidad
-        const { data: donante } = await supabase
-          .from('donantes')
-          .select('documento')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
-
-        if (donante) {
-          navigate('/donante');
-        } else {
-          navigate('/entidad');
-        }
-
-        toast({
-          title: "Bienvenido",
-          description: "Has iniciado sesión correctamente",
-        });
+      await auth.login(loginEmail, loginPassword);
+      const user = auth.getUser();
+      
+      if (user.tipo === 'donante') {
+        navigate('/donante');
+      } else {
+        navigate('/entidad');
       }
+
+      toast({
+        title: "Bienvenido",
+        description: "Has iniciado sesión correctamente",
+      });
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
@@ -108,46 +95,30 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Crear usuario en Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      await auth.register({
         email: regDonanteEmail,
         password: regDonantePassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/donante`,
-        },
+        tipo: 'donante',
+        nombre: regDonanteNombre,
+        documento: regDonanteDocumento,
       });
 
-      if (authError) throw authError;
+      toast({
+        title: "Cuenta creada",
+        description: "Cuenta creada correctamente. Redirigiendo...",
+      });
 
-      if (authData.user) {
-        // Crear registro de donante
-        const { error: donanteError } = await supabase
-          .from('donantes')
-          .insert({
-            documento: regDonanteDocumento,
-            nombre: regDonanteNombre,
-            correo: regDonanteEmail,
-            user_id: authData.user.id,
-          });
+      // Limpiar formulario
+      setRegDonanteDocumento("");
+      setRegDonanteNombre("");
+      setRegDonanteEmail("");
+      setRegDonantePassword("");
+      setRegDonanteConfirm("");
 
-        if (donanteError) {
-          // Si falla, eliminar usuario de auth
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          throw new Error("No se pudo guardar el documento del donante. Verifica el número de cédula.");
-        }
-
-        toast({
-          title: "Cuenta creada",
-          description: "Cuenta creada correctamente. Ya puedes iniciar sesión.",
-        });
-
-        // Limpiar formulario
-        setRegDonanteDocumento("");
-        setRegDonanteNombre("");
-        setRegDonanteEmail("");
-        setRegDonantePassword("");
-        setRegDonanteConfirm("");
-      }
+      // Redirigir después de un breve delay
+      setTimeout(() => {
+        navigate('/donante');
+      }, 1000);
     } catch (error: any) {
       toast({
         title: "Error al crear cuenta",
@@ -183,44 +154,28 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Crear usuario en Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      await auth.register({
         email: regEntidadEmail,
         password: regEntidadPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/entidad`,
-        },
+        tipo: 'entidad',
+        nombre: regEntidadNombre,
       });
 
-      if (authError) throw authError;
+      toast({
+        title: "Cuenta creada",
+        description: "Cuenta creada correctamente. Redirigiendo...",
+      });
 
-      if (authData.user) {
-        // Crear registro de entidad
-        const { error: entidadError } = await supabase
-          .from('entidades')
-          .insert({
-            nombre: regEntidadNombre,
-            correo: regEntidadEmail,
-            user_id: authData.user.id,
-          });
+      // Limpiar formulario
+      setRegEntidadNombre("");
+      setRegEntidadEmail("");
+      setRegEntidadPassword("");
+      setRegEntidadConfirm("");
 
-        if (entidadError) {
-          // Si falla, eliminar usuario de auth
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          throw entidadError;
-        }
-
-        toast({
-          title: "Cuenta creada",
-          description: "Cuenta creada correctamente. Ya puedes iniciar sesión.",
-        });
-
-        // Limpiar formulario
-        setRegEntidadNombre("");
-        setRegEntidadEmail("");
-        setRegEntidadPassword("");
-        setRegEntidadConfirm("");
-      }
+      // Redirigir después de un breve delay
+      setTimeout(() => {
+        navigate('/entidad');
+      }, 1000);
     } catch (error: any) {
       toast({
         title: "Error al crear cuenta",

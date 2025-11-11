@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, LogOut, FileText, Droplets, AlertCircle, User } from "lucide-react";
+import { Heart, LogOut, FileText, Droplets, AlertCircle, User, BarChart3, Search, Package } from "lucide-react";
 import EntidadHistorias from "@/components/entidad/EntidadHistorias";
 import EntidadDonaciones from "@/components/entidad/EntidadDonaciones";
 import EntidadSolicitudes from "@/components/entidad/EntidadSolicitudes";
 import EntidadPerfil from "@/components/entidad/EntidadPerfil";
+import EntidadReportes from "@/components/entidad/EntidadReportes";
+import EntidadBusquedaSangre from "@/components/entidad/EntidadBusquedaSangre";
+import EntidadInventario from "@/components/entidad/EntidadInventario";
 
 const EntidadDashboard = () => {
   const navigate = useNavigate();
@@ -22,20 +25,16 @@ const EntidadDashboard = () => {
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.getUser();
       
       if (!user) {
         navigate('/auth');
         return;
       }
 
-      const { data, error } = await supabase
-        .from('entidades')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      const data = await auth.getMe();
 
-      if (error || !data) {
+      if (!data) {
         toast({
           title: "Error",
           description: "No se encontró tu perfil de entidad",
@@ -53,8 +52,8 @@ const EntidadDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    auth.logout();
     navigate('/');
     toast({
       title: "Sesión cerrada",
@@ -95,10 +94,10 @@ const EntidadDashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <Tabs defaultValue="historias" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="historias">
               <FileText className="mr-2 h-4 w-4" />
-              Historias Clínicas
+              Historias
             </TabsTrigger>
             <TabsTrigger value="donaciones">
               <Droplets className="mr-2 h-4 w-4" />
@@ -107,6 +106,18 @@ const EntidadDashboard = () => {
             <TabsTrigger value="solicitudes">
               <AlertCircle className="mr-2 h-4 w-4" />
               Solicitudes
+            </TabsTrigger>
+            <TabsTrigger value="reportes">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Reportes
+            </TabsTrigger>
+            <TabsTrigger value="busqueda">
+              <Search className="mr-2 h-4 w-4" />
+              Búsqueda
+            </TabsTrigger>
+            <TabsTrigger value="inventario">
+              <Package className="mr-2 h-4 w-4" />
+              Inventario
             </TabsTrigger>
             <TabsTrigger value="perfil">
               <User className="mr-2 h-4 w-4" />
@@ -124,6 +135,18 @@ const EntidadDashboard = () => {
 
           <TabsContent value="solicitudes">
             <EntidadSolicitudes entidad={entidad} />
+          </TabsContent>
+
+          <TabsContent value="reportes">
+            <EntidadReportes entidad={entidad} />
+          </TabsContent>
+
+          <TabsContent value="busqueda">
+            <EntidadBusquedaSangre />
+          </TabsContent>
+
+          <TabsContent value="inventario">
+            <EntidadInventario entidad={entidad} />
           </TabsContent>
 
           <TabsContent value="perfil">

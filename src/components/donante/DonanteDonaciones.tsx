@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { donaciones } from "@/lib/api";
 import { Droplets } from "lucide-react";
 
 interface DonanteDonacionesProps {
@@ -17,14 +17,14 @@ const DonanteDonaciones = ({ donante }: DonanteDonacionesProps) => {
   }, [donante]);
 
   const loadDonaciones = async () => {
-    const { data } = await supabase
-      .from('donaciones')
-      .select('*')
-      .eq('documento_donante', donante.documento)
-      .order('fecha_donacion', { ascending: false });
-
-    setDonaciones(data || []);
-    setLoading(false);
+    try {
+      const data = await donaciones.getAll();
+      setDonaciones(data || []);
+    } catch (error) {
+      console.error('Error loading donaciones:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { donantes } from "@/lib/api";
 import { User } from "lucide-react";
 
 interface DonantePerfilProps {
@@ -31,12 +31,7 @@ const DonantePerfil = ({ donante, onUpdate }: DonantePerfilProps) => {
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('donantes')
-        .update({ tipo_sangre: tipoSangre })
-        .eq('documento', donante.documento);
-
-      if (error) throw error;
+      await donantes.updateTipoSangre(donante.documento, tipoSangre);
 
       toast({
         title: "Perfil actualizado",

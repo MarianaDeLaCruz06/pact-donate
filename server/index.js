@@ -1192,6 +1192,12 @@ app.post('/api/solicitudes/emergencia', authenticateToken, async (req, res) => {
   }
 });
 
+// Test page
+app.get('/test-api', (req, res) => {
+  console.log('🧪 Sirviendo página de test');
+  res.sendFile(path.join(__dirname, 'test-api.html'));
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   console.log('💓 Health check solicitado');

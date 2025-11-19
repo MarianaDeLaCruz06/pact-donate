@@ -10,11 +10,15 @@ const getApiUrl = () => {
   // In development, use localhost
   const isDevelopment = import.meta.env.DEV;
   const url = isDevelopment ? 'http://localhost:3001/api' : '/api';
-  console.log(`🔧 API URL (${isDevelopment ? 'development' : 'production'}):`, url);
+  console.log(`🔧 API Configuration:`);
+  console.log(`   Mode: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
+  console.log(`   API URL: ${url}`);
+  console.log(`   Window location: ${window.location.origin}`);
   return url;
 };
 
 const API_URL = getApiUrl();
+console.log('📡 API Client initialized with URL:', API_URL);
 
 // Storage keys
 const TOKEN_KEY = 'lifelink_token';
@@ -99,17 +103,31 @@ export const auth = {
     nombre?: string;
     documento?: string;
   }) => {
-    const response = await apiRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
+    console.log('🔐 auth.register llamado con:', {
+      email: data.email,
+      tipo: data.tipo,
+      nombre: data.nombre,
+      documento: data.documento ? '***' : undefined
     });
     
-    if (response.token) {
-      setToken(response.token);
-      setUser(response.user);
+    try {
+      const response = await apiRequest('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      console.log('✅ Registro exitoso:', response);
+      
+      if (response.token) {
+        setToken(response.token);
+        setUser(response.user);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Error en auth.register:', error);
+      throw error;
     }
-    
-    return response;
   },
 
   login: async (email: string, password: string) => {

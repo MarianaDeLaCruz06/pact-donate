@@ -38,10 +38,12 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 
 Railway detectará automáticamente que es un proyecto Node.js. El archivo `railway.toml` ya está configurado con:
 
-- **Build Command**: `npm run build:all` (instala dependencias y construye el frontend)
-- **Start Command**: `npm run start` (inicia el servidor backend)
+- **Build Command**: `npm install && npm run build && cd server && npm install`
+- **Start Command**: `cd server && node index.js`
 
-Si necesitas modificar estos comandos, edita el archivo `railway.toml`.
+Estos comandos ya están configurados en los archivos `railway.toml` y `nixpacks.toml`. Railway usará npm automáticamente.
+
+**Nota importante**: El archivo `bun.lockb` ha sido eliminado para evitar conflictos. Si Railway intenta usar Bun, asegúrate de que los archivos de configuración estén presentes.
 
 ### 5. Ejecutar Migraciones de Base de Datos
 

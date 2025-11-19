@@ -21,6 +21,10 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the React app (for production)
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -1105,6 +1109,12 @@ app.post('/api/solicitudes/emergencia', authenticateToken, async (req, res) => {
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 app.listen(PORT, () => {

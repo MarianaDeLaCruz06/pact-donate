@@ -148,7 +148,7 @@ const EntidadSolicitudes = ({ entidad }: any) => {
             <DialogTrigger asChild>
               <Button variant="destructive" size="lg" className="w-full">
                 <AlertTriangle className="mr-2 h-5 w-5" />
-                🚨 BOTÓN DE EMERGENCIA 🚨
+                 BOTÓN DE EMERGENCIA 
               </Button>
             </DialogTrigger>
             <DialogContent>

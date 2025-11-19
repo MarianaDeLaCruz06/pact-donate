@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "cd server && npm run dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:server": "cd server && npm install",
+    "build:all": "npm install && npm run build && npm run build:server",
+    "start": "cd server && npm start",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate": "cd server && npm run migrate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

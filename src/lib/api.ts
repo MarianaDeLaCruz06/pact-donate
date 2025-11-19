@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Use relative URL in production, localhost in development
+const getApiUrl = () => {
+  // Check if VITE_API_URL is explicitly set
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // In production (deployed), use relative URL
+  // In development, use localhost
+  const isDevelopment = import.meta.env.DEV;
+  return isDevelopment ? 'http://localhost:3001/api' : '/api';
+};
+
+const API_URL = getApiUrl();
 
 // Storage keys
 const TOKEN_KEY = 'lifelink_token';

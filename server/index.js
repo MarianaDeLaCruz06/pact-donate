@@ -43,8 +43,16 @@ pool.query('SELECT NOW()', (err, res) => {
 });
 
 // Middleware
-app.use(cors());
+// CORS debe estar ANTES de cualquier otra cosa
+app.use(cors({
+  origin: '*', // En desarrollo, permite todos los orígenes
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -58,7 +66,15 @@ app.use((req, res, next) => {
 
 // Serve static files from the React app (for production)
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../dist')));
+// Solo servir archivos estáticos si NO es una ruta de API
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    // Es una petición a la API, no servir archivos estáticos
+    return next();
+  }
+  // No es API, servir archivos estáticos
+  express.static(path.join(__dirname, '../dist'))(req, res, next);
+});
 
 // JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -1178,12 +1194,20 @@ app.post('/api/solicitudes/emergencia', authenticateToken, async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  console.log('💓 Health check solicitado');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API error handler - debe estar ANTES del catch-all
+app.use('/api/*', (req, res) => {
+  console.log('⚠️  Ruta de API no encontrada:', req.method, req.path);
+  res.status(404).json({ error: 'Ruta de API no encontrada' });
 });
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get('*', (req, res) => {
+  console.log('📄 Sirviendo index.html para:', req.path);
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 

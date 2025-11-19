@@ -2,13 +2,16 @@
 const getApiUrl = () => {
   // Check if VITE_API_URL is explicitly set
   if (import.meta.env.VITE_API_URL) {
+    console.log('🔧 Usando VITE_API_URL:', import.meta.env.VITE_API_URL);
     return import.meta.env.VITE_API_URL;
   }
   
   // In production (deployed), use relative URL
   // In development, use localhost
   const isDevelopment = import.meta.env.DEV;
-  return isDevelopment ? 'http://localhost:3001/api' : '/api';
+  const url = isDevelopment ? 'http://localhost:3001/api' : '/api';
+  console.log(`🔧 API URL (${isDevelopment ? 'development' : 'production'}):`, url);
+  return url;
 };
 
 const API_URL = getApiUrl();
@@ -53,17 +56,38 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || `Error: ${response.status}`);
+  const url = `${API_URL}${endpoint}`;
+  console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+  if (options.body) {
+    console.log('📦 Request Body:', options.body);
   }
 
-  return response.json();
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    console.log(`📨 Response Status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+      console.error('❌ Error Response:', error);
+      throw new Error(error.error || `Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Response Data:', data);
+    return data;
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('❌ Network Error: No se pudo conectar al servidor');
+      console.error('URL intentada:', url);
+      console.error('API_URL configurada:', API_URL);
+      throw new Error('No se pudo conectar al servidor. Verifica que el backend esté corriendo.');
+    }
+    throw error;
+  }
 };
 
 // Auth API

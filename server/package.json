@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "migrate": "node run-migration.js"
+    "migrate": "node run-migration.js",
+    "test:db": "node test-db.js"
   },
   "dependencies": {
     "express": "^4.18.2",

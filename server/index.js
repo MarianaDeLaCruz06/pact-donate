@@ -12,14 +12,49 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 // PostgreSQL connection
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:tgerjFFtMjEWUdzWDhVDOvKYWNGFCHvn@turntable.proxy.rlwy.net:33001/railway';
 
+console.log('=================================');
+console.log('🚀 Iniciando servidor...');
+console.log('Puerto:', PORT);
+console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('DATABASE_URL configurada:', DATABASE_URL ? '✅ Sí' : '❌ No');
+if (DATABASE_URL) {
+  // Ocultar password en el log
+  const urlObj = new URL(DATABASE_URL);
+  console.log('DB Host:', urlObj.hostname);
+  console.log('DB Port:', urlObj.port);
+  console.log('DB Name:', urlObj.pathname.substring(1));
+}
+console.log('=================================');
+
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false } // Railway requiere SSL
 });
 
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Error al conectar con la base de datos:', err.message);
+    console.error('Detalles:', err);
+  } else {
+    console.log('✅ Conexión a base de datos exitosa');
+    console.log('Hora del servidor DB:', res.rows[0].now);
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
 
 // Serve static files from the React app (for production)
 const path = require('path');
@@ -45,76 +80,96 @@ const authenticateToken = (req, res, next) => {
 
 // Auth Routes
 app.post('/api/auth/register', async (req, res) => {
+  console.log('📝 Iniciando proceso de registro...');
   try {
     const { email, password, tipo, nombre, documento } = req.body;
+    console.log('Datos recibidos:', { email, tipo, nombre, documento: documento ? '***' : undefined });
 
     if (!email || !password) {
+      console.log('❌ Validación fallida: Email o contraseña faltante');
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
     // Check if user already exists
+    console.log('🔍 Verificando si el email ya existe...');
     const userCheck = await pool.query(
       'SELECT id FROM users WHERE email = $1',
       [email]
     );
 
     if (userCheck.rows.length > 0) {
+      console.log('❌ Email ya registrado:', email);
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
 
     // Hash password
+    console.log('🔐 Encriptando contraseña...');
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
+    console.log('💾 Creando usuario en la base de datos...');
     const userResult = await pool.query(
       'INSERT INTO users (email, password, tipo) VALUES ($1, $2, $3) RETURNING id, email, tipo',
       [email, hashedPassword, tipo]
     );
 
     const user = userResult.rows[0];
+    console.log('✅ Usuario creado con ID:', user.id);
 
     // Create profile based on type
     if (tipo === 'donante') {
+      console.log('👤 Creando perfil de donante...');
       if (!documento || !nombre) {
+        console.log('❌ Validación fallida: Documento o nombre faltante para donante');
         // Delete user if profile creation fails
         await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
         return res.status(400).json({ error: 'Documento y nombre son requeridos para donantes' });
       }
 
       // Check if documento already exists
+      console.log('🔍 Verificando si el documento ya existe...');
       const docCheck = await pool.query(
         'SELECT documento FROM donantes WHERE documento = $1',
         [documento]
       );
 
       if (docCheck.rows.length > 0) {
+        console.log('❌ Documento ya registrado:', documento);
         await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
         return res.status(400).json({ error: 'El documento ya está registrado' });
       }
 
+      console.log('💾 Insertando perfil de donante...');
       await pool.query(
         'INSERT INTO donantes (documento, nombre, correo, user_id) VALUES ($1, $2, $3, $4)',
         [documento, nombre, email, user.id]
       );
+      console.log('✅ Perfil de donante creado');
     } else if (tipo === 'entidad') {
+      console.log('🏥 Creando perfil de entidad...');
       if (!nombre) {
+        console.log('❌ Validación fallida: Nombre faltante para entidad');
         await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
         return res.status(400).json({ error: 'Nombre es requerido para entidades' });
       }
 
+      console.log('💾 Insertando perfil de entidad...');
       await pool.query(
         'INSERT INTO entidades (nombre, correo, user_id) VALUES ($1, $2, $3)',
         [nombre, email, user.id]
       );
+      console.log('✅ Perfil de entidad creado');
     }
 
     // Generate JWT
+    console.log('🔑 Generando token JWT...');
     const token = jwt.sign(
       { id: user.id, email: user.email, tipo: user.tipo },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    console.log('✅ Registro completado exitosamente para:', email);
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
       token,
@@ -125,44 +180,57 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en registro:', error);
-    res.status(500).json({ error: 'Error al registrar usuario' });
+    console.error('❌ ERROR EN REGISTRO:');
+    console.error('Mensaje:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Código:', error.code);
+    res.status(500).json({ error: 'Error al registrar usuario: ' + error.message });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
+  console.log('🔐 Iniciando proceso de login...');
   try {
     const { email, password } = req.body;
+    console.log('Email:', email);
 
     if (!email || !password) {
+      console.log('❌ Validación fallida: Email o contraseña faltante');
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
     // Get user
+    console.log('🔍 Buscando usuario en la base de datos...');
     const userResult = await pool.query(
       'SELECT id, email, password, tipo FROM users WHERE email = $1',
       [email]
     );
 
     if (userResult.rows.length === 0) {
+      console.log('❌ Usuario no encontrado:', email);
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const user = userResult.rows[0];
+    console.log('✅ Usuario encontrado, tipo:', user.tipo);
 
     // Verify password
+    console.log('🔐 Verificando contraseña...');
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
+      console.log('❌ Contraseña incorrecta');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     // Generate JWT
+    console.log('🔑 Generando token JWT...');
     const token = jwt.sign(
       { id: user.id, email: user.email, tipo: user.tipo },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    console.log('✅ Login exitoso para:', email);
     res.json({
       token,
       user: {
@@ -172,8 +240,10 @@ app.post('/api/auth/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    console.error('❌ ERROR EN LOGIN:');
+    console.error('Mensaje:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Error al iniciar sesión: ' + error.message });
   }
 });
 
@@ -1117,7 +1187,11 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('\n=================================');
+  console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+  console.log(`🌐 URL: http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log('=================================\n');
 });
 

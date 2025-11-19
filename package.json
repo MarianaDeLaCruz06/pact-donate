@@ -13,7 +13,8 @@
     "start": "cd server && npm start",
     "lint": "eslint .",
     "preview": "vite preview",
-    "migrate": "cd server && npm run migrate"
+    "migrate": "cd server && npm run migrate",
+    "setup:db": "cd server && npm run setup:db"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

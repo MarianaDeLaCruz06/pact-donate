@@ -7,6 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "migrate": "node run-migration.js",
+    "setup:db": "node setup-database.js",
     "test:db": "node test-db.js"
   },
   "dependencies": {
